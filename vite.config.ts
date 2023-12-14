@@ -1,7 +1,10 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import fs from 'fs';
-import { PUBLIC_ENVIRONMENT } from '$env/static/public';
+
+const env = loadEnv('all', process.cwd());
+
+const PUBLIC_ENVIRONMENT = env.PUBLIC_ENVIRONMENT;
 
 function server(environment: string) {
 	if (environment === 'DEV') {

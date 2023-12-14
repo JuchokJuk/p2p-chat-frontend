@@ -145,7 +145,7 @@
 </script>
 
 <div>
-	<video bind:this={video} width={256} height={256} playsinline autoplay>
+	<video bind:this={video} width={256} height={256} playsinline autoplay muted>
 		<track kind="captions" />
 	</video>
 	{#each $user.connections as connection (connection.receiver.UUID)}

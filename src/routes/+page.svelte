@@ -165,5 +165,6 @@
 		background: rgb(236, 236, 236);
 		object-fit: cover;
 		border-radius: 8px;
+		transform: scaleX(-1);
 	}
 </style>

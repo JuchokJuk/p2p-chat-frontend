@@ -1,0 +1,1 @@
+export const env={"PUBLIC_PEER_SERVER_HOST":"localhost","PUBLIC_PEER_SERVER_PORT":"8001","PUBLIC_ROOM_SERVER_URL":"ws://localhost:8000/chat"}

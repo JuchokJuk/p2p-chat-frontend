@@ -3,9 +3,10 @@
 	import { onMount } from 'svelte';
 	import { user } from '../stores/user';
 	import { send } from '$lib/send';
+	import Peer from 'peerjs';
 	import { PUBLIC_PEER_SERVER_HOST } from '$env/static/public';
 	import { PUBLIC_PEER_SERVER_PORT } from '$env/static/public';
-	import Peer from 'peerjs';
+	import { PUBLIC_ROOM_SERVER_URL } from '$env/static/public';
 
 	let video: HTMLVideoElement;
 	let stream: MediaStream;
@@ -28,7 +29,7 @@
 	}
 
 	onMount(async () => {
-		socket = new WebSocket('ws://localhost:8000/chat');
+		socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
 		socket.addEventListener('message', (event) => {
 			const message = JSON.parse(event.data);
@@ -50,9 +51,9 @@
 				for (const existingUserUUID of message.payload) {
 					const peer = new Peer({
 						host: PUBLIC_PEER_SERVER_HOST,
-						port: Number(PUBLIC_PEER_SERVER_PORT)
+						port: PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined
 					});
-					peer.on('open', (UUID) => {
+					peer.on('open', (UUID: string) => {
 						$user.connections.push({
 							sender: { peerUUID: UUID, peer },
 							receiver: { peerUUID: undefined, UUID: existingUserUUID }
@@ -79,7 +80,7 @@
 				console.log('GOT generate peer for new user', message.payload);
 				const peer = new Peer({
 					host: PUBLIC_PEER_SERVER_HOST,
-					port: Number(PUBLIC_PEER_SERVER_PORT)
+					port: PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined
 				});
 
 				peer.on('open', (UUID: string) => {
@@ -147,7 +148,7 @@
 	<video bind:this={video} width={256} height={256} playsinline autoplay>
 		<track kind="captions" />
 	</video>
-	{#each $user.connections as connection}
+	{#each $user.connections as connection (connection.receiver.UUID)}
 		{#if stream && connection.sender.peer && connection.receiver.peerUUID && connection.receiver.UUID !== UUID}
 			<Call {connection} {stream} />
 		{/if}

@@ -1,9 +1,17 @@
 <script lang="ts">
-	import Call from '$lib/Call.svelte';
 	import { onMount } from 'svelte';
-	import { user } from '../stores/user';
+
 	import { send } from '$lib/send';
+
+	import BestFitLayout from '$lib/BestFitLayout.svelte';
+	import Call from '$lib/Call.svelte';
+	import Video from '$lib/Video.svelte';
+	import Card from '$lib/Card.svelte';
+
 	import Peer from 'peerjs';
+
+	import type { Connection } from '$lib/Connection';
+
 	import { PUBLIC_PEER_SERVER_HOST } from '$env/static/public';
 	import { PUBLIC_PEER_SERVER_PORT } from '$env/static/public';
 	import { PUBLIC_ROOM_SERVER_URL } from '$env/static/public';
@@ -14,18 +22,19 @@
 	let socket: WebSocket;
 	let UUID: string;
 
-	function startWebCam() {
-		navigator.mediaDevices
-			.getUserMedia({
-				video: true,
+	let connections: Connection[] = [];
+
+	async function startWebCam() {
+		try {
+			const videoStream = await navigator.mediaDevices.getUserMedia({
+				video: { width: 64, height: 48 },
 				audio: true
-			})
-			.then((videoStream) => {
-				stream = videoStream;
-				video.srcObject = stream;
-				video.play();
-			})
-			.catch((error) => console.warn(error));
+			});
+			stream = videoStream;
+			video.srcObject = stream;
+		} catch (error) {
+			console.warn(error);
+		}
 	}
 
 	onMount(async () => {
@@ -54,11 +63,11 @@
 						port: PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined
 					});
 					peer.on('open', (UUID: string) => {
-						$user.connections.push({
+						connections.push({
 							sender: { peerUUID: UUID, peer },
 							receiver: { peerUUID: undefined, UUID: existingUserUUID }
 						});
-						$user = $user;
+						connections = connections;
 
 						send(socket, {
 							action: 'set peer for existing user',
@@ -73,7 +82,7 @@
 						});
 					});
 				}
-				console.log('DONE generate peers for existing users', $user);
+				console.log('DONE generate peers for existing users', connections);
 			}
 
 			if (message.action === 'generate peer for new user') {
@@ -84,16 +93,16 @@
 				});
 
 				peer.on('open', (UUID: string) => {
-					$user.connections.push({
+					connections.push({
 						sender: { peerUUID: UUID, peer },
 						receiver: {
 							peerUUID: message.payload.newUserPeerUUID,
 							UUID: message.payload.newUserUUID
 						}
 					});
-					$user = $user;
+					connections = connections;
 
-					console.log('DONE generate peer for new user', $user);
+					console.log('DONE generate peer for new user', connections);
 
 					send(socket, {
 						action: 'set peer for new user',
@@ -115,24 +124,24 @@
 			if (message.action === 'save peer from existed user') {
 				console.log('GOT save peer from existed user', message.payload);
 
-				const existingUser = $user.connections.find(
+				const existingUser = connections.find(
 					(connection) => connection.receiver.UUID === message.payload.existingUserUUID
 				);
 				if (!existingUser) return;
 				existingUser.receiver.peerUUID = message.payload.peerUUID;
 
-				$user = $user;
+				connections = connections;
 
-				console.log('DONE ave peer from existed user', $user);
+				console.log('DONE ave peer from existed user', connections);
 			}
 
 			if (message.action === 'remove user') {
 				console.log('GOT remove user', message.payload);
-				$user.connections = $user.connections.filter(
+				connections = connections.filter(
 					(connection) => connection.receiver.UUID !== message.payload
 				);
-				$user = $user;
-				console.log('DONE remove user', $user);
+				connections = connections;
+				console.log('DONE remove user', connections);
 			}
 		});
 
@@ -142,29 +151,44 @@
 
 		startWebCam();
 	});
+
+	let establishedConnections: Connection[] = [];
+
+	$: {
+		establishedConnections = connections.filter(
+			(connection: Connection) =>
+				connection.sender.peer &&
+				connection.receiver.peerUUID &&
+				connection.receiver.UUID !== UUID &&
+				stream
+		);
+	}
 </script>
 
-<div>
-	<video bind:this={video} width={256} height={256} playsinline autoplay muted>
-		<track kind="captions" />
-	</video>
-	{#each $user.connections as connection (connection.receiver.UUID)}
-		{#if stream && connection.sender.peer && connection.receiver.peerUUID && connection.receiver.UUID !== UUID}
-			<Call {connection} {stream} />
+<div class="page">
+	<BestFitLayout
+		childCount={establishedConnections.length + 1}
+		childAspectRatio={1.3333333333333333}
+		let:itemWidth
+		let:itemHeight
+		let:positions
+	>
+		{#if positions.length >= 1}
+			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
+				<Video bind:video mirrored={true} />
+			</Card>
 		{/if}
-	{/each}
+		{#each establishedConnections as connection, i (connection)}
+			<Card width={itemWidth} height={itemHeight} x={positions[i + 1].x} y={positions[i + 1].y}>
+				<Call {connection} {stream} />
+			</Card>
+		{/each}
+	</BestFitLayout>
 </div>
 
-<style>
-	div {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 24px;
-	}
-	video {
-		background: rgb(236, 236, 236);
-		object-fit: cover;
-		border-radius: 8px;
-		transform: scaleX(-1);
+<style lang="scss">
+	.page {
+		height: 100%;
+		padding: 16px;
 	}
 </style>

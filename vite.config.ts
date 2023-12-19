@@ -2,7 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, loadEnv } from 'vite';
 import fs from 'fs';
 
-const env = loadEnv('all', process.cwd());
+const env = loadEnv('all', process.cwd(), '');
 
 const PUBLIC_ENVIRONMENT = env.PUBLIC_ENVIRONMENT;
 

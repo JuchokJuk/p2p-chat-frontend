@@ -15,6 +15,7 @@
 	import { PUBLIC_PEER_SERVER_HOST } from '$env/static/public';
 	import { PUBLIC_PEER_SERVER_PORT } from '$env/static/public';
 	import { PUBLIC_ROOM_SERVER_URL } from '$env/static/public';
+	import Debug from '$lib/Debug.svelte';
 
 	let video: HTMLVideoElement;
 	let stream: MediaStream;
@@ -23,6 +24,8 @@
 	let UUID: string;
 
 	let connections: Connection[] = [];
+
+	let logs: { text: string; data: any }[] = [];
 
 	async function startWebCam() {
 		try {
@@ -44,7 +47,9 @@
 			const message = JSON.parse(event.data);
 
 			if (message.action === 'init first user') {
-				console.log('GOT init first user', message.payload);
+				logs.push({ text: 'GOT init first user', data: message.payload });
+				logs = logs;
+
 				UUID = message.payload;
 
 				send(socket, {
@@ -52,11 +57,14 @@
 					payload: null
 				});
 
-				console.log('SEND save first user', null);
+				logs.push({ text: 'SEND save first user', data: null });
+				logs = logs;
 			}
 
 			if (message.action === 'generate peers for existing users') {
-				console.log('GOT generate peers for existing users', message.payload);
+				logs.push({ text: 'GOT generate peers for existing users', data: message.payload });
+				logs = logs;
+
 				for (const existingUserUUID of message.payload) {
 					const peer = new Peer({
 						host: PUBLIC_PEER_SERVER_HOST,
@@ -76,17 +84,25 @@
 								receiver: { peerUUID: undefined, UUID: existingUserUUID }
 							}
 						});
-						console.log('SEND set peer for new user', {
-							sender: { peerUUID: UUID },
-							receiver: { peerUUID: undefined, UUID: existingUserUUID }
+
+						logs.push({
+							text: 'SEND set peer for new user',
+							data: {
+								sender: { peerUUID: UUID },
+								receiver: { peerUUID: undefined, UUID: existingUserUUID }
+							}
 						});
+						logs = logs;
 					});
 				}
-				console.log('DONE generate peers for existing users', connections);
+				logs.push({ text: 'DONE generate peers for existing users', data: connections });
+				logs = logs;
 			}
 
 			if (message.action === 'generate peer for new user') {
-				console.log('GOT generate peer for new user', message.payload);
+				logs.push({ text: 'GOT generate peer for new user', data: message.payload });
+				logs = logs;
+
 				const peer = new Peer({
 					host: PUBLIC_PEER_SERVER_HOST,
 					port: PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined
@@ -102,7 +118,8 @@
 					});
 					connections = connections;
 
-					console.log('DONE generate peer for new user', connections);
+					logs.push({ text: 'DONE generate peer for new user', data: connections });
+					logs = logs;
 
 					send(socket, {
 						action: 'set peer for new user',
@@ -113,16 +130,21 @@
 						}
 					});
 
-					console.log('SEND set peer for new user', {
-						newUserUUID: message.payload.newUserUUID,
-						existingUserUUID: message.payload.existingUserUUID,
-						peerUUID: UUID
+					logs.push({
+						text: 'SEND set peer for new user',
+						data: {
+							newUserUUID: message.payload.newUserUUID,
+							existingUserUUID: message.payload.existingUserUUID,
+							peerUUID: UUID
+						}
 					});
+					logs = logs;
 				});
 			}
 
 			if (message.action === 'save peer from existed user') {
-				console.log('GOT save peer from existed user', message.payload);
+				logs.push({ text: 'GOT save peer from existed user', data: message.payload });
+				logs = logs;
 
 				const existingUser = connections.find(
 					(connection) => connection.receiver.UUID === message.payload.existingUserUUID
@@ -132,16 +154,20 @@
 
 				connections = connections;
 
-				console.log('DONE ave peer from existed user', connections);
+				logs.push({ text: 'DONE ave peer from existed user', data: connections });
+				logs = logs;
 			}
 
 			if (message.action === 'remove user') {
-				console.log('GOT remove user', message.payload);
+				logs.push({ text: 'GOT remove user', data: message.payload });
+				logs = logs;
 				connections = connections.filter(
 					(connection) => connection.receiver.UUID !== message.payload
 				);
 				connections = connections;
-				console.log('DONE remove user', connections);
+
+				logs.push({ text: 'DONE remove user', data: connections });
+				logs = logs;
 			}
 		});
 
@@ -162,6 +188,12 @@
 				connection.receiver.UUID !== UUID &&
 				stream
 		);
+	}
+
+	let debug = false;
+
+	function toggleDebug() {
+		debug = !debug;
 	}
 </script>
 
@@ -186,9 +218,36 @@
 	</BestFitLayout>
 </div>
 
+{#if debug}
+	<div class="modal">
+		<Debug {logs} {connections} />
+	</div>
+{/if}
+
+<button on:click={toggleDebug}>toggle debug</button>
+
 <style lang="scss">
 	.page {
 		height: 100%;
 		padding: 16px;
+	}
+
+	button {
+		position: fixed;
+		top: 16px;
+		right: 16px;
+		background: black;
+		color: white;
+		padding: 8px 12px;
+		border: none;
+		border-radius: 8px;
+	}
+
+	.modal {
+		position: fixed;
+		top: 0;
+		right: 0;
+		width: 100%;
+		height: 100%;
 	}
 </style>

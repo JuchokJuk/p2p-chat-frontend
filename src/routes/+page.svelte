@@ -207,7 +207,7 @@
 	>
 		{#if positions.length >= 1}
 			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
-				<Video bind:video mirrored={true} />
+				<Video bind:video mirrored={true} muted/>
 			</Card>
 		{/if}
 		{#each establishedConnections as connection, i (connection)}

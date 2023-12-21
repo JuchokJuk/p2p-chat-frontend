@@ -1,10 +1,11 @@
 <script lang="ts">
 	export let video: HTMLVideoElement;
 	export let mirrored: boolean | undefined = false;
+	export let muted: boolean | undefined = false;
 </script>
 
 <div class="container">
-	<video bind:this={video} playsinline autoplay class:mirrored>
+	<video bind:this={video} playsinline autoplay class:mirrored {muted}>
 		<track kind="captions" />
 	</video>
 </div>

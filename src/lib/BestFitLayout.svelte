@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { inscribe } from './inscribe';
 
 	let resizeObserver: ResizeObserver;
 	let container: HTMLDivElement;
@@ -15,80 +16,110 @@
 
 	let positions: { x: number; y: number }[] = [];
 
-	function getDimensions(childCount: number) {
-		const containerPosition = container.getBoundingClientRect();
-
-		const grids = [];
-
-		let gridColumnCount = childCount;
-
-		for (let gridHeight = 1; gridHeight <= childCount; gridHeight++) {
-			for (let gridWidth = 1; gridWidth <= gridColumnCount; gridWidth++) {
-				if (gridWidth === gridColumnCount) gridColumnCount--; // skip too large grids
-
-				const area = gridHeight * gridWidth;
-				const emptyCells = area - childCount;
-
-				if (
-					(emptyCells < gridHeight && emptyCells < gridWidth && area >= childCount) ||
-					childCount === area
-				) {
-					grids.push({ columnCount: gridWidth, rowCount: gridHeight, area });
-				}
-			}
+	/*
+		нати соседние точки системы
+		{
+			y = ceil(childCount / (ceil(x / childAspectRatio)))
+			x = ceil(childCount / ceil(y)) * childAspectRatio
 		}
+		c пересечением вектора [container.width, container.height] с функцией y = childCount * childAspectRatio / x
+
+		точки преобразовать в прямоугольники размера [x, y] и вписать в прямоугольник [containerWidth, containerHeight]
+		
+		прямоугольники поделить на y строк и x / childAspectRatio столбцов
+		
+		выбрать прямоугольник с наибольшим размером ячейки
+	*/
+
+	function calcPositions(childCount: number) {
+		const containerPosition = container.getBoundingClientRect();
 
 		const containerWidth = containerPosition.width;
 		const containerHeight = containerPosition.height;
 
-		const inscribedGrids = [];
+		if (containerHeight === 0 || containerWidth === 0) return;
 
-		for (const rectangle of grids) {
-			const inscribedGrid = {
-				columnCount: rectangle.columnCount,
-				rowCount: rectangle.rowCount,
-				width: rectangle.columnCount * childAspectRatio,
-				height: rectangle.rowCount,
-				area: 0
-			};
+		const containerAspectRatio = containerWidth / containerHeight;
 
-			const containerAspectRatio = containerWidth / containerHeight;
-			const inscribedGridAspectRatio = inscribedGrid.width / inscribedGrid.height;
+		// get intersection
 
-			if (containerAspectRatio >= inscribedGridAspectRatio) {
-				const inscribedGridHeight = inscribedGrid.height;
-				inscribedGrid.height *= containerHeight / inscribedGridHeight;
-				inscribedGrid.width *= containerHeight / inscribedGridHeight;
-			} else {
-				const inscribedGridWidth = inscribedGrid.width;
-				inscribedGrid.width *= containerWidth / inscribedGridWidth;
-				inscribedGrid.height *= containerWidth / inscribedGridWidth;
+		const x = Math.sqrt(childCount * childAspectRatio * containerAspectRatio);
+		const y = x / containerAspectRatio;
+
+		// get points
+
+		const lowerPoint = { x: 0, y: 0 };
+		const upperPoint = { x: 0, y: 0 };
+
+		if (containerAspectRatio > 1) {
+			lowerPoint.y = Math.floor(y);
+			upperPoint.y = Math.ceil(y);
+
+			if (lowerPoint.y) {
+				lowerPoint.x = Math.ceil(childCount / Math.ceil(lowerPoint.y)) * childAspectRatio;
 			}
-			inscribedGrid.area = inscribedGrid.height * inscribedGrid.width;
-			inscribedGrids.push(inscribedGrid);
+			upperPoint.x = Math.ceil(childCount / Math.ceil(upperPoint.y)) * childAspectRatio;
+		} else {
+			lowerPoint.x = Math.floor(x / childAspectRatio) * childAspectRatio;
+			upperPoint.x = Math.ceil(x / childAspectRatio) * childAspectRatio;
+
+			if (lowerPoint.x) {
+				lowerPoint.y = Math.ceil(childCount / Math.ceil(lowerPoint.x / childAspectRatio));
+			}
+			upperPoint.y = Math.ceil(childCount / Math.ceil(upperPoint.x / childAspectRatio));
 		}
 
-		const bestFitGrid = inscribedGrids.reduce((prev, curr) =>
-			prev.area > curr.area ? prev : curr
+		// inscribe grids
+
+		const inscribedUpperGrid = {
+			height: 0,
+			width: 0,
+			rowCount: upperPoint.y,
+			columnCount: upperPoint.x / childAspectRatio
+		};
+
+		[inscribedUpperGrid.width, inscribedUpperGrid.height] = inscribe(
+			{ width: upperPoint.x, height: upperPoint.y },
+			{ width: containerWidth, height: containerHeight },
+			containerAspectRatio
 		);
 
-		rowCount = bestFitGrid.rowCount;
-		columnCount = bestFitGrid.columnCount;
-		itemHeight = bestFitGrid.height / rowCount;
-		itemWidth = bestFitGrid.width / columnCount;
+		if (lowerPoint.x && lowerPoint.y) {
+			const inscribedLowerGrid = {
+				height: 0,
+				width: 0,
+				rowCount: lowerPoint.y,
+				columnCount: lowerPoint.x / childAspectRatio
+			};
 
-		const bestFitGridCenter = {
-			x: bestFitGrid.width / 2,
-			y: bestFitGrid.height / 2
-		};
-		const containerCenter = {
-			x: containerWidth / 2,
-			y: containerHeight / 2
-		};
-		const offsetX = containerCenter.x - bestFitGridCenter.x;
-		const offsetY = containerCenter.y - bestFitGridCenter.y;
+			[inscribedLowerGrid.width, inscribedLowerGrid.height] = inscribe(
+				{ width: lowerPoint.x, height: lowerPoint.y },
+				{ width: containerWidth, height: containerHeight },
+				containerAspectRatio
+			);
+
+			var inscribedGrid =
+				inscribedLowerGrid.width / inscribedLowerGrid.columnCount >
+				inscribedUpperGrid.width / inscribedUpperGrid.columnCount
+					? inscribedLowerGrid
+					: inscribedUpperGrid;
+		} else {
+			var inscribedGrid = inscribedUpperGrid;
+		}
+
+		// calc positions
+
+		rowCount = inscribedGrid.rowCount;
+		columnCount = inscribedGrid.columnCount;
+
+		itemHeight = inscribedGrid.height / rowCount;
+		itemWidth = inscribedGrid.width / columnCount;
+
+		const offsetX = containerWidth / 2 - inscribedGrid.width / 2;
+		const offsetY = containerHeight / 2 - inscribedGrid.height / 2;
 
 		positions = [];
+
 		for (let i = 0; i < childCount; i++) {
 			let rowIndex = Math.floor(i / columnCount);
 			let columnIndex = i % columnCount;
@@ -97,12 +128,17 @@
 				y: rowIndex * itemHeight + offsetY
 			});
 		}
+
 		positions = positions;
+	}
+
+	$: {
+		if (container) calcPositions(childCount);
 	}
 
 	onMount(() => {
 		resizeObserver = new ResizeObserver(() => {
-			getDimensions(childCount);
+			calcPositions(childCount);
 		});
 
 		resizeObserver.observe(container);
@@ -113,10 +149,6 @@
 			resizeObserver.disconnect();
 		}
 	});
-
-	$: {
-		if (container) getDimensions(childCount);
-	}
 </script>
 
 <div class="container" bind:this={container}>

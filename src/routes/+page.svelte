@@ -30,7 +30,7 @@
 	async function startWebCam() {
 		try {
 			const videoStream = await navigator.mediaDevices.getUserMedia({
-				video: { width: 64, height: 48 },
+				video: true, // { width: 64, height: 48 },
 				audio: true
 			});
 			stream = videoStream;
@@ -59,9 +59,7 @@
 
 				logs.push({ text: 'SEND save first user', data: null });
 				logs = logs;
-			}
-
-			if (message.action === 'generate peers for existing users') {
+			} else if (message.action === 'generate peers for existing users') {
 				logs.push({ text: 'GOT generate peers for existing users', data: message.payload });
 				logs = logs;
 
@@ -97,9 +95,7 @@
 				}
 				logs.push({ text: 'DONE generate peers for existing users', data: connections });
 				logs = logs;
-			}
-
-			if (message.action === 'generate peer for new user') {
+			} else if (message.action === 'generate peer for new user') {
 				logs.push({ text: 'GOT generate peer for new user', data: message.payload });
 				logs = logs;
 
@@ -140,9 +136,7 @@
 					});
 					logs = logs;
 				});
-			}
-
-			if (message.action === 'save peer from existed user') {
+			} else if (message.action === 'save peer from existed user') {
 				logs.push({ text: 'GOT save peer from existed user', data: message.payload });
 				logs = logs;
 
@@ -156,9 +150,7 @@
 
 				logs.push({ text: 'DONE ave peer from existed user', data: connections });
 				logs = logs;
-			}
-
-			if (message.action === 'remove user') {
+			} else if (message.action === 'remove user') {
 				logs.push({ text: 'GOT remove user', data: message.payload });
 				logs = logs;
 				connections = connections.filter(
@@ -207,7 +199,7 @@
 	>
 		{#if positions.length >= 1}
 			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
-				<Video bind:video mirrored={true} muted/>
+				<Video bind:video mirrored={true} muted />
 			</Card>
 		{/if}
 		{#each establishedConnections as connection, i (connection)}

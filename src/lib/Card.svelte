@@ -2,6 +2,7 @@
 	import { scale } from 'svelte/transition';
 	import Animation from './Animation';
 	import { browser } from '$app/environment';
+	import { onDestroy } from 'svelte';
 
 	export let width: number;
 	export let height: number;
@@ -34,6 +35,13 @@
 			yAnimation.animate(y);
 		}
 	}
+
+	onDestroy(() => {
+		widthAnimation.destroy();
+		heightAnimation.destroy();
+		xAnimation.destroy();
+		yAnimation.destroy();
+	});
 </script>
 
 <div

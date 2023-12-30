@@ -7,6 +7,7 @@
 	import Call from '$lib/Call.svelte';
 	import Video from '$lib/Video.svelte';
 	import Card from '$lib/Card.svelte';
+	import Debug from '$lib/Debug.svelte';
 
 	import Peer from 'peerjs';
 
@@ -14,8 +15,8 @@
 
 	import { PUBLIC_PEER_SERVER_HOST } from '$env/static/public';
 	import { PUBLIC_PEER_SERVER_PORT } from '$env/static/public';
-	import { PUBLIC_ROOM_SERVER_URL } from '$env/static/public';
-	import Debug from '$lib/Debug.svelte';
+	import { PUBLIC_ROOM_SERVER_WS_URL } from '$env/static/public';
+	import { PUBLIC_ROOM_SERVER_HTTP_URL } from '$env/static/public';
 
 	let video: HTMLVideoElement;
 	let stream: MediaStream;
@@ -27,10 +28,12 @@
 
 	let logs: { text: string; data: any }[] = [];
 
+	const port = PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined;
+
 	async function startWebCam() {
 		try {
 			const videoStream = await navigator.mediaDevices.getUserMedia({
-				video: true, // { width: 64, height: 48 },
+				video: { width: 64, height: 48 },
 				audio: true
 			});
 			stream = videoStream;
@@ -41,68 +44,53 @@
 	}
 
 	onMount(async () => {
-		socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
+		const response = await fetch(`${PUBLIC_ROOM_SERVER_HTTP_URL}/users`);
+		const users = await response.json();
+
+		socket = new WebSocket(`${PUBLIC_ROOM_SERVER_WS_URL}/chat`);
+
+		socket.onopen = () => {
+			for (const existingUserUUID of users) {
+				const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
+				peer.on('open', (UUID: string) => {
+					connections.push({
+						sender: { peerUUID: UUID, peer },
+						receiver: { peerUUID: undefined, UUID: existingUserUUID }
+					});
+					connections = connections;
+
+					send(socket, {
+						action: 'set peer for existing user',
+						payload: {
+							sender: { peerUUID: UUID },
+							receiver: { peerUUID: undefined, UUID: existingUserUUID }
+						}
+					});
+				});
+
+				logs.push({
+					text: 'SEND set peer for new user',
+					data: {
+						sender: { peerUUID: UUID },
+						receiver: { peerUUID: undefined, UUID: existingUserUUID }
+					}
+				});
+				logs = logs;
+			}
+		};
 
 		socket.addEventListener('message', (event) => {
 			const message = JSON.parse(event.data);
 
-			if (message.action === 'init first user') {
-				logs.push({ text: 'GOT init first user', data: message.payload });
+			if (message.action === 'init user') {
+				logs.push({ text: 'GOT init user', data: message.payload });
 				logs = logs;
-
 				UUID = message.payload;
-
-				send(socket, {
-					action: 'save first user',
-					payload: null
-				});
-
-				logs.push({ text: 'SEND save first user', data: null });
-				logs = logs;
-			} else if (message.action === 'generate peers for existing users') {
-				logs.push({ text: 'GOT generate peers for existing users', data: message.payload });
-				logs = logs;
-
-				for (const existingUserUUID of message.payload) {
-					const peer = new Peer({
-						host: PUBLIC_PEER_SERVER_HOST,
-						port: PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined
-					});
-					peer.on('open', (UUID: string) => {
-						connections.push({
-							sender: { peerUUID: UUID, peer },
-							receiver: { peerUUID: undefined, UUID: existingUserUUID }
-						});
-						connections = connections;
-
-						send(socket, {
-							action: 'set peer for existing user',
-							payload: {
-								sender: { peerUUID: UUID },
-								receiver: { peerUUID: undefined, UUID: existingUserUUID }
-							}
-						});
-
-						logs.push({
-							text: 'SEND set peer for new user',
-							data: {
-								sender: { peerUUID: UUID },
-								receiver: { peerUUID: undefined, UUID: existingUserUUID }
-							}
-						});
-						logs = logs;
-					});
-				}
-				logs.push({ text: 'DONE generate peers for existing users', data: connections });
-				logs = logs;
 			} else if (message.action === 'generate peer for new user') {
 				logs.push({ text: 'GOT generate peer for new user', data: message.payload });
 				logs = logs;
 
-				const peer = new Peer({
-					host: PUBLIC_PEER_SERVER_HOST,
-					port: PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined
-				});
+				const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
 				peer.on('open', (UUID: string) => {
 					connections.push({

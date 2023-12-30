@@ -52,7 +52,7 @@
 		const upperPoint = { x: 0, y: 0 };
 
 		if (containerAspectRatio > 1) {
-			lowerPoint.y = Math.floor(y);
+			lowerPoint.y = ~~y;
 			upperPoint.y = Math.ceil(y);
 
 			if (lowerPoint.y) {
@@ -60,7 +60,7 @@
 			}
 			upperPoint.x = Math.ceil(childCount / Math.ceil(upperPoint.y)) * childAspectRatio;
 		} else {
-			lowerPoint.x = Math.floor(x / childAspectRatio) * childAspectRatio;
+			lowerPoint.x = ~~(x / childAspectRatio) * childAspectRatio;
 			upperPoint.x = Math.ceil(x / childAspectRatio) * childAspectRatio;
 
 			if (lowerPoint.x) {
@@ -121,7 +121,7 @@
 		positions = [];
 
 		for (let i = 0; i < childCount; i++) {
-			let rowIndex = Math.floor(i / columnCount);
+			let rowIndex = ~~(i / columnCount);
 			let columnIndex = i % columnCount;
 			positions.push({
 				x: columnIndex * itemWidth + offsetX,

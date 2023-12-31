@@ -90,7 +90,7 @@
 
 			intervalId = setInterval(() => {
 				send(socket, { action: 'heartbeat', payload: null });
-			}, 10000);
+			}, 5000);
 		});
 
 		socket.addEventListener('message', (event) => {

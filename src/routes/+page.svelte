@@ -43,7 +43,8 @@
 		}
 	}
 
-	onMount(async () => {
+	async function connect() {
+		console.log('CONNECT!');
 		const response = await fetch(`${PUBLIC_ROOM_SERVER_HTTP_URL}/users`);
 		const users = await response.json();
 
@@ -68,6 +69,14 @@
 					});
 				});
 
+				peer.on('disconnected', (error) => {
+					console.warn('peer for existing user disconnected', error);
+				});
+
+				peer.on('error', (error) => {
+					console.warn('peer for existing user error', error);
+				});
+
 				logs.push({
 					text: 'SEND set peer for new user',
 					data: {
@@ -77,6 +86,14 @@
 				});
 				logs = logs;
 			}
+		};
+
+		socket.onerror = (event) => {
+			console.warn(event);
+		};
+
+		socket.onclose = (event) => {
+			console.warn(event);
 		};
 
 		socket.addEventListener('message', (event) => {
@@ -91,6 +108,14 @@
 				logs = logs;
 
 				const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
+
+				peer.on('disconnected', (error) => {
+					console.warn('peer for new user disconnected', error);
+				});
+
+				peer.on('error', (error) => {
+					console.warn('peer for new user error', error);
+				});
 
 				peer.on('open', (UUID: string) => {
 					connections.push({
@@ -154,8 +179,11 @@
 		socket.addEventListener('close', (event) => {
 			console.warn('socket was closed', event);
 		});
-
 		startWebCam();
+	}
+
+	onMount(() => {
+		connect();
 	});
 
 	let establishedConnections: Connection[] = [];
@@ -176,6 +204,15 @@
 		debug = !debug;
 	}
 </script>
+
+<svelte:window
+	on:offline={() => {
+		socket.close();
+		connections = [];
+		console.log('offline');
+	}}
+	on:online={connect}
+/>
 
 <div class="page">
 	<BestFitLayout

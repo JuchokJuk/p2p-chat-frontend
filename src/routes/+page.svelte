@@ -23,6 +23,7 @@
 
 	let socket: WebSocket;
 	let UUID: string;
+	let intervalId: NodeJS.Timeout;
 
 	let connections: Connection[] = [];
 
@@ -50,7 +51,7 @@
 
 		socket = new WebSocket(`${PUBLIC_ROOM_SERVER_WS_URL}/chat`);
 
-		socket.onopen = () => {
+		socket.addEventListener('open', () => {
 			for (const existingUserUUID of users) {
 				const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 				peer.on('open', (UUID: string) => {
@@ -86,15 +87,11 @@
 				});
 				logs = logs;
 			}
-		};
 
-		socket.onerror = (event) => {
-			console.warn(event);
-		};
-
-		socket.onclose = (event) => {
-			console.warn(event);
-		};
+			intervalId = setInterval(() => {
+				send(socket, { action: 'heartbeat', payload: null });
+			}, 10000);
+		});
 
 		socket.addEventListener('message', (event) => {
 			const message = JSON.parse(event.data);
@@ -177,8 +174,11 @@
 		});
 
 		socket.addEventListener('close', (event) => {
+			clearInterval(intervalId);
 			console.warn('socket was closed', event);
+			connect();
 		});
+
 		startWebCam();
 	}
 
@@ -204,15 +204,6 @@
 		debug = !debug;
 	}
 </script>
-
-<svelte:window
-	on:offline={() => {
-		socket.close();
-		connections = [];
-		console.log('offline');
-	}}
-	on:online={connect}
-/>
 
 <div class="page">
 	<BestFitLayout

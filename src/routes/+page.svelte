@@ -16,7 +16,6 @@
 	import { PUBLIC_PEER_SERVER_HOST } from '$env/static/public';
 	import { PUBLIC_PEER_SERVER_PORT } from '$env/static/public';
 	import { PUBLIC_ROOM_SERVER_WS_URL } from '$env/static/public';
-	import { PUBLIC_ROOM_SERVER_HTTP_URL } from '$env/static/public';
 
 	const port = PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined;
 
@@ -39,12 +38,10 @@
 
 	async function startWebCam() {
 		try {
-			const videoStream = await navigator.mediaDevices.getUserMedia({
+			stream = video.srcObject = await navigator.mediaDevices.getUserMedia({
 				video: { width: 64, height: 48 },
 				audio: true
 			});
-			stream = videoStream;
-			video.srcObject = stream;
 		} catch (error) {
 			console.warn(error);
 		}
@@ -52,60 +49,68 @@
 
 	async function connect() {
 		console.log('CONNECT!');
-		const response = await fetch(`${PUBLIC_ROOM_SERVER_HTTP_URL}/users`);
-		const users = await response.json();
 
 		socket = new WebSocket(`${PUBLIC_ROOM_SERVER_WS_URL}/chat`);
 
-		socket.addEventListener('open', () => {
-			for (const existingUserUUID of users) {
-				const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
-				peer.on('open', (UUID: string) => {
-					connections.push({
-						sender: { peerUUID: UUID, peer },
-						receiver: { peerUUID: undefined, UUID: existingUserUUID }
-					});
-					connections = connections;
-
-					send(socket, {
-						action: 'set peer for existing user',
-						payload: {
-							sender: { peerUUID: UUID },
-							receiver: { peerUUID: undefined, UUID: existingUserUUID }
-						}
-					});
-				});
-
-				peer.on('disconnected', (error) => {
-					console.warn('peer for existing user disconnected', error);
-				});
-
-				peer.on('error', (error) => {
-					console.warn('peer for existing user error', error);
-				});
-
-				logs.push({
-					text: 'SEND set peer for new user',
-					data: {
-						sender: { peerUUID: UUID },
-						receiver: { peerUUID: undefined, UUID: existingUserUUID }
-					}
-				});
-				logs = logs;
-			}
-
-			intervalId = setInterval(() => {
-				send(socket, { action: 'heartbeat', payload: null });
-			}, 5000);
-		});
+		socket.addEventListener('open', () => {});
 
 		socket.addEventListener('message', (event) => {
 			const message = JSON.parse(event.data);
 
+			if (message.action === 'init first user') {
+				logs.push({ text: 'GOT init first user', data: message.payload });
+				logs = logs;
+				UUID = message.payload;
+			}
 			if (message.action === 'init user') {
 				logs.push({ text: 'GOT init user', data: message.payload });
 				logs = logs;
-				UUID = message.payload;
+				UUID = message.payload.UUID;
+
+				//
+
+				for (const existingUserUUID of message.payload.users) {
+					const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
+					peer.on('open', (UUID: string) => {
+						connections.push({
+							sender: { peerUUID: UUID, peer },
+							receiver: { peerUUID: undefined, UUID: existingUserUUID }
+						});
+						connections = connections;
+
+						send(socket, {
+							action: 'set peer for existing user',
+							payload: {
+								sender: { peerUUID: UUID },
+								receiver: { peerUUID: undefined, UUID: existingUserUUID }
+							}
+						});
+					});
+
+					peer.on('disconnected', (error) => {
+						console.warn('peer for existing user disconnected', error);
+					});
+
+					peer.on('error', (error) => {
+						console.warn('peer for existing user error', error);
+					});
+
+					logs.push({
+						text: 'SEND set peer for new user',
+						data: {
+							sender: { peerUUID: UUID },
+							receiver: { peerUUID: undefined, UUID: existingUserUUID }
+						}
+					});
+					logs = logs;
+				}
+
+				intervalId = setInterval(() => {
+					send(socket, { action: 'heartbeat', payload: null });
+					console.log('heartbeat');
+				}, 5000);
+
+				//
 			} else if (message.action === 'generate peer for new user') {
 				logs.push({ text: 'GOT generate peer for new user', data: message.payload });
 				logs = logs;
@@ -188,7 +193,8 @@
 		startWebCam();
 	}
 
-	function disconnect(){
+	function disconnect() {
+		console.log('DISCONNECT!');
 		clearInterval(intervalId);
 		connections = [];
 	}
@@ -207,12 +213,12 @@
 		connect();
 	});
 
-	onDestroy(()=>{
-		clearInterval(intervalId)
-	})
+	onDestroy(() => {
+		clearInterval(intervalId);
+	});
 </script>
 
-<svelte:window on:online={connect} on:offline={disconnect}/>
+<svelte:window on:online={connect} on:offline={disconnect} />
 
 <div class="page">
 	<BestFitLayout

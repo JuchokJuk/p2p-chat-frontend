@@ -46,7 +46,7 @@
 	class="container"
 	style="width: {currentWidth}px; height: {currentHeight}px; transform: translate({currentX}px, {currentY}px);"
 >
-	<div class="cell" transition:scale|global={{ start: 0.9, duration: 100 }}>
+	<div class="cell" transition:scale|global={{ start: 0.9, duration: 400 }}>
 		<slot />
 	</div>
 </div>

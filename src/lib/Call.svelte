@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Video from './Video.svelte';
-	import type { Connection } from './Connection';
+	import type Peer from 'peerjs';
 
-	export let connection: Connection;
+	export let peer: Peer;
+	export let receiverPeerUUID: string;
+
 	export let stream: MediaStream;
 
 	let video: HTMLVideoElement;
 
 	onMount(() => {
-		connection.sender.peer!.call(connection.receiver.peerUUID!, stream);
+		peer.call(receiverPeerUUID, stream);
 
-		connection.sender.peer!.on('call', (call) => {
+		peer.on('call', (call) => {
 			call.answer(stream);
 			call.on('stream', async (remoteStream) => {
 				video.srcObject = remoteStream;

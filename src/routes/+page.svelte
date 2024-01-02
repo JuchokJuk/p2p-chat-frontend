@@ -205,9 +205,10 @@
 		);
 	}
 
-	onMount(() => {
+	async function start() {
+		await startWebCam();
 		connect();
-	});
+	}
 
 	onDestroy(() => {
 		clearInterval(intervalId);
@@ -226,7 +227,7 @@
 	>
 		{#if positions.length >= 1}
 			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
-				<Video bind:video mirrored={true} muted onMountCallback={startWebCam} />
+				<Video bind:video mirrored={true} muted onMountCallback={start} />
 			</Card>
 		{/if}
 		{#each establishedConnections as connection, i (connection)}

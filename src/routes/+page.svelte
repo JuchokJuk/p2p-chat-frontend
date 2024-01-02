@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	import { send } from '$lib/send';
 
@@ -18,6 +18,8 @@
 	import { PUBLIC_ROOM_SERVER_WS_URL } from '$env/static/public';
 	import { PUBLIC_ROOM_SERVER_HTTP_URL } from '$env/static/public';
 
+	const port = PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined;
+
 	let video: HTMLVideoElement;
 	let stream: MediaStream;
 
@@ -26,10 +28,14 @@
 	let intervalId: NodeJS.Timeout;
 
 	let connections: Connection[] = [];
+	let establishedConnections: Connection[] = [];
 
 	let logs: { text: string; data: any }[] = [];
+	let debug = false;
 
-	const port = PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined;
+	function toggleDebug() {
+		debug = !debug;
+	}
 
 	async function startWebCam() {
 		try {
@@ -158,7 +164,7 @@
 
 				connections = connections;
 
-				logs.push({ text: 'DONE ave peer from existed user', data: connections });
+				logs.push({ text: 'DONE save peer from existed user', data: connections });
 				logs = logs;
 			} else if (message.action === 'remove user') {
 				logs.push({ text: 'GOT remove user', data: message.payload });
@@ -182,11 +188,10 @@
 		startWebCam();
 	}
 
-	onMount(() => {
-		connect();
-	});
-
-	let establishedConnections: Connection[] = [];
+	function disconnect(){
+		clearInterval(intervalId);
+		connections = [];
+	}
 
 	$: {
 		establishedConnections = connections.filter(
@@ -198,12 +203,16 @@
 		);
 	}
 
-	let debug = false;
+	onMount(() => {
+		connect();
+	});
 
-	function toggleDebug() {
-		debug = !debug;
-	}
+	onDestroy(()=>{
+		clearInterval(intervalId)
+	})
 </script>
+
+<svelte:window on:online={connect} on:offline={disconnect}/>
 
 <div class="page">
 	<BestFitLayout

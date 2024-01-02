@@ -15,7 +15,7 @@
 
 	import { PUBLIC_PEER_SERVER_HOST } from '$env/static/public';
 	import { PUBLIC_PEER_SERVER_PORT } from '$env/static/public';
-	import { PUBLIC_ROOM_SERVER_WS_URL } from '$env/static/public';
+	import { PUBLIC_ROOM_SERVER_URL } from '$env/static/public';
 
 	const port = PUBLIC_PEER_SERVER_PORT ? Number(PUBLIC_PEER_SERVER_PORT) : undefined;
 
@@ -37,6 +37,7 @@
 	}
 
 	async function startWebCam() {
+		console.log('start webcam', video);
 		try {
 			stream = video.srcObject = await navigator.mediaDevices.getUserMedia({
 				video: { width: 64, height: 48 },
@@ -50,9 +51,14 @@
 	async function connect() {
 		console.log('CONNECT!');
 
-		socket = new WebSocket(`${PUBLIC_ROOM_SERVER_WS_URL}/chat`);
+		socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
-		socket.addEventListener('open', () => {});
+		socket.addEventListener('open', () => {
+			intervalId = setInterval(() => {
+				send(socket, { action: 'heartbeat', payload: null });
+				console.log('heartbeat');
+			}, 5000);
+		});
 
 		socket.addEventListener('message', (event) => {
 			const message = JSON.parse(event.data);
@@ -66,8 +72,6 @@
 				logs.push({ text: 'GOT init user', data: message.payload });
 				logs = logs;
 				UUID = message.payload.UUID;
-
-				//
 
 				for (const existingUserUUID of message.payload.users) {
 					const peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
@@ -104,13 +108,6 @@
 					});
 					logs = logs;
 				}
-
-				intervalId = setInterval(() => {
-					send(socket, { action: 'heartbeat', payload: null });
-					console.log('heartbeat');
-				}, 5000);
-
-				//
 			} else if (message.action === 'generate peer for new user') {
 				logs.push({ text: 'GOT generate peer for new user', data: message.payload });
 				logs = logs;
@@ -186,11 +183,10 @@
 
 		socket.addEventListener('close', (event) => {
 			clearInterval(intervalId);
+			connections = [];
 			console.warn('socket was closed', event);
 			connect();
 		});
-
-		startWebCam();
 	}
 
 	function disconnect() {
@@ -230,7 +226,7 @@
 	>
 		{#if positions.length >= 1}
 			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
-				<Video bind:video mirrored={true} muted />
+				<Video bind:video mirrored={true} muted onMountCallback={startWebCam} />
 			</Card>
 		{/if}
 		{#each establishedConnections as connection, i (connection)}

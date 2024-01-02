@@ -132,9 +132,7 @@
 		positions = positions;
 	}
 
-	$: {
-		if (container) calcPositions(childCount);
-	}
+	$: if (container) calcPositions(childCount);
 
 	onMount(() => {
 		resizeObserver = new ResizeObserver(() => {

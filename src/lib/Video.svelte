@@ -1,7 +1,15 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	export let video: HTMLVideoElement;
 	export let mirrored: boolean | undefined = false;
 	export let muted: boolean | undefined = false;
+
+	export let onMountCallback: (() => void | Promise<void>) | undefined = undefined;
+
+	onMount(() => {
+		if (onMountCallback !== undefined) onMountCallback();
+	});
 </script>
 
 <div class="container">

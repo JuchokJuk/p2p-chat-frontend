@@ -27,13 +27,11 @@
 		currentY = value;
 	});
 
-	$: {
-		if (browser) {
-			widthAnimation.animate(width);
-			heightAnimation.animate(height);
-			xAnimation.animate(x);
-			yAnimation.animate(y);
-		}
+	$: if (browser) {
+		widthAnimation.animate(width);
+		heightAnimation.animate(height);
+		xAnimation.animate(x);
+		yAnimation.animate(y);
 	}
 
 	onDestroy(() => {

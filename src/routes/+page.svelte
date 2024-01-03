@@ -41,6 +41,10 @@
 	async function connect() {
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
+		peer.on('call', (mediaConnection) => {
+			mediaConnection.answer(stream);
+		});
+
 		peer.on('disconnected', (error) => {
 			console.warn('disconnected', error);
 		});
@@ -67,20 +71,19 @@
 			socket.addEventListener('message', (event) => {
 				const message = JSON.parse(event.data);
 
-				if (message.action === 'add user') {
+				if (message.action === 'save users') {
+					users = message.payload;
+				} else if (message.action === 'add user') {
 					users.push(message.payload);
 					users = users;
-				} else if (message.action === 'save users') {
-					users = message.payload;
 				} else if (message.action === 'remove user') {
 					users = users.filter((user) => user.UUID !== message.payload);
 				}
 			});
 
 			socket.addEventListener('close', (event) => {
-				clearInterval(intervalId);
-				users = [];
 				console.warn('socket was closed', event);
+				disconnect();
 				connect();
 			});
 		});

@@ -10,14 +10,11 @@
 	let video: HTMLVideoElement;
 
 	function start() {
-		peer.call(receiverPeerUUID, stream);
+		const mediaConnection = peer.call(receiverPeerUUID, stream);
 
-		peer.on('call', (mediaConnection) => {
-			mediaConnection.answer(stream);
-			mediaConnection.on('stream', async (remoteStream) => {
-				video.srcObject = remoteStream;
-			});
-		});
+		mediaConnection.on('stream', (remoteStream)=>{
+			video.srcObject = remoteStream;
+		})
 	}
 </script>
 

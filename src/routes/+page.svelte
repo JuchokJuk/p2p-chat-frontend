@@ -58,20 +58,28 @@
 	async function connect() {
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
+		//
+
+		peer.on('disconnected', (error) => {
+			console.warn('!!! peer disconnected !!!', error);
+		});
+
+		peer.on('error', (error) => {
+			console.warn('!!! peer error !!!', error);
+		});
+
+		//
+		
 		peer.on('call', (mediaConnection) => {
 			mediaConnection.answer(stream);
 		});
 
-		peer.on('disconnected', (error) => {
-			console.warn('disconnected', error);
-		});
-
-		peer.on('error', (error) => {
-			console.warn('error', error);
-		});
-
 		peer.on('open', (UUID: string) => {
 			socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
+
+			socket.onerror = (event) => {
+				console.warn('!!! socket error !!!', event)
+			}
 
 			socket.onopen = () => {
 				intervalId = setInterval(() => {

@@ -25,7 +25,25 @@
 	let peer: Peer;
 	let peerUUID: string;
 
-	let users: { UUID: string; peerUUID: string }[] = [];
+	type User = { UUID: string; peerUUID: string };
+
+	let users: User[] = [];
+
+	const actions = {
+		saveUsers: (data: User[]) => {
+			users = data;
+		},
+		addUser: (user: User) => {
+			users.push(user);
+			users = users;
+		},
+		removeUser: (userUUID: string) => {
+			users = users.filter((user) => user.UUID !== userUUID);
+		}
+	};
+
+	type Action = keyof typeof actions;
+	type Message = { action: Action; payload: any };
 
 	async function startWebCam() {
 		try {
@@ -57,35 +75,24 @@
 			peerUUID = UUID;
 			socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
-			socket.addEventListener('open', () => {
+			socket.onopen = () => {
 				intervalId = setInterval(() => {
 					send(socket, { action: 'heartbeat', payload: null });
 				}, 5000);
 
-				send(socket, {
-					action: 'save peer UUID',
-					payload: UUID
-				});
-			});
+				send(socket, { action: 'savePeerUUID', payload: UUID });
+			};
 
-			socket.addEventListener('message', (event) => {
-				const message = JSON.parse(event.data);
+			socket.onmessage = (event) => {
+				const message = JSON.parse(event.data) as Message;
+				actions[message.action](message.payload);
+			};
 
-				if (message.action === 'save users') {
-					users = message.payload;
-				} else if (message.action === 'add user') {
-					users.push(message.payload);
-					users = users;
-				} else if (message.action === 'remove user') {
-					users = users.filter((user) => user.UUID !== message.payload);
-				}
-			});
-
-			socket.addEventListener('close', (event) => {
+			socket.onclose = (event) => {
 				console.warn('socket was closed', event);
 				disconnect();
 				connect();
-			});
+			};
 		});
 	}
 

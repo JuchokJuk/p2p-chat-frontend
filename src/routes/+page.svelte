@@ -68,6 +68,8 @@
 
 		peer.on('error', (error) => {
 			console.warn('!!! peer error !!!', error);
+			disconnect();
+			connect();
 		});
 
 		//
@@ -122,7 +124,7 @@
 	});
 </script>
 
-<svelte:window on:online={start} on:offline={disconnect} />
+<svelte:window on:online={connect} on:offline={disconnect} />
 
 <div class="page">
 	<BestFitLayout

@@ -56,6 +56,8 @@
 	}
 
 	async function connect() {
+		console.log('connect');
+		
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
 		//
@@ -107,6 +109,7 @@
 	}
 
 	function disconnect() {
+		console.log('disconnect');
 		clearInterval(intervalId);
 		socket.close();
 		users = [];

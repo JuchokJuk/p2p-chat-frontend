@@ -57,7 +57,7 @@
 
 	async function connect() {
 		console.log('connect');
-		
+
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
 		//
@@ -97,8 +97,9 @@
 			};
 
 			socket.onclose = (event) => {
-				console.warn('socket was closed', event);
-				disconnect();
+				console.log('disconnect');
+				clearInterval(intervalId);
+				users = [];
 			};
 		});
 	}
@@ -121,7 +122,7 @@
 	});
 </script>
 
-<svelte:window on:online={connect} on:offline={disconnect} />
+<svelte:window on:online={start} on:offline={disconnect} />
 
 <div class="page">
 	<BestFitLayout

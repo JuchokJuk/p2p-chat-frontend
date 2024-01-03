@@ -46,7 +46,7 @@
 
 	async function startWebCam() {
 		stream = video.srcObject = await navigator.mediaDevices.getUserMedia({
-			video: { width: 64, height: 48 },
+			video: { width: 640, height: 480 },
 			audio: true
 		});
 	}

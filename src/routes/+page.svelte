@@ -62,14 +62,18 @@
 
 		peer.on('disconnected', (error) => {
 			console.warn('!!! peer disconnected !!!', error);
+			disconnect();
+			connect();
 		});
 
 		peer.on('error', (error) => {
 			console.warn('!!! peer error !!!', error);
+			disconnect();
+			connect();
 		});
 
 		//
-		
+
 		peer.on('call', (mediaConnection) => {
 			mediaConnection.answer(stream);
 		});
@@ -78,8 +82,8 @@
 			socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
 			socket.onerror = (event) => {
-				console.warn('!!! socket error !!!', event)
-			}
+				console.warn('!!! socket error !!!', event);
+			};
 
 			socket.onopen = () => {
 				intervalId = setInterval(() => {

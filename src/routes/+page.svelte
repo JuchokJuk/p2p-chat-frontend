@@ -45,34 +45,25 @@
 	type Message = { action: Action; payload: any };
 
 	async function startWebCam() {
-		try {
-			stream = video.srcObject = await navigator.mediaDevices.getUserMedia({
-				video: { width: 64, height: 48 },
-				audio: true
-			});
-		} catch (error) {
-			console.warn(error);
-		}
+		stream = video.srcObject = await navigator.mediaDevices.getUserMedia({
+			video: { width: 64, height: 48 },
+			audio: true
+		});
 	}
 
 	async function connect() {
-		console.log('connect');
-
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
-		//
-
-		peer.on('disconnected', (error) => {
-			console.warn('!!! peer disconnected !!!', error);
+		peer.on('disconnected', (event) => {
+			console.warn('peer disconnected', event);
 		});
 
-		peer.on('error', (error) => {
-			console.warn('!!! peer error !!!', error);
+		peer.on('error', (event) => {
+			console.warn('peer error', event);
+
 			disconnect();
 			connect();
 		});
-
-		//
 
 		peer.on('call', (mediaConnection) => {
 			mediaConnection.answer(stream);
@@ -82,7 +73,7 @@
 			socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
 			socket.onerror = (event) => {
-				console.warn('!!! socket error !!!', event);
+				console.warn('socket error', event);
 			};
 
 			socket.onopen = () => {
@@ -98,24 +89,22 @@
 				actions[message.action](message.payload);
 			};
 
-			socket.onclose = (event) => {
-				console.log('disconnect');
+			socket.onclose = () => {
 				clearInterval(intervalId);
 				users = [];
 			};
 		});
 	}
 
-	async function start() {
-		await startWebCam();
-		connect();
-	}
-
 	function disconnect() {
-		console.log('disconnect');
 		clearInterval(intervalId);
 		socket.close();
 		users = [];
+	}
+
+	async function start() {
+		await startWebCam();
+		connect();
 	}
 
 	onDestroy(() => {

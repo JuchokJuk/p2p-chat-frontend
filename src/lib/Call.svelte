@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Video from './Video.svelte';
 	import type Peer from 'peerjs';
 
@@ -10,16 +9,16 @@
 
 	let video: HTMLVideoElement;
 
-	onMount(() => {
+	function start() {
 		peer.call(receiverPeerUUID, stream);
 
-		peer.on('call', (call) => {
-			call.answer(stream);
-			call.on('stream', async (remoteStream) => {
+		peer.on('call', (mediaConnection) => {
+			mediaConnection.answer(stream);
+			mediaConnection.on('stream', async (remoteStream) => {
 				video.srcObject = remoteStream;
 			});
 		});
-	});
+	}
 </script>
 
-<Video bind:video />
+<Video bind:video onMountCallback={start} />

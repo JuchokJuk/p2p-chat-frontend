@@ -23,6 +23,7 @@
 	let intervalId: NodeJS.Timeout;
 
 	let peer: Peer;
+	let peerUUID: string;
 
 	let users: { UUID: string; peerUUID: string }[] = [];
 
@@ -41,14 +42,15 @@
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
 
 		peer.on('disconnected', (error) => {
-			console.warn('peer for existing user disconnected', error);
+			console.warn('disconnected', error);
 		});
 
 		peer.on('error', (error) => {
-			console.warn('peer for existing user error', error);
+			console.warn('error', error);
 		});
 
 		peer.on('open', (UUID: string) => {
+			peerUUID = UUID;
 			socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
 			socket.addEventListener('open', () => {
@@ -112,12 +114,13 @@
 	>
 		{#if positions.length >= 1}
 			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
+				{peerUUID}
 				<Video bind:video mirrored={true} muted onMountCallback={start} />
 			</Card>
 		{/if}
-		{#each users as user, i (user.UUID)}
+		{#each users as user, i (user.peerUUID)}
 			<Card width={itemWidth} height={itemHeight} x={positions[i + 1].x} y={positions[i + 1].y}>
-				{user.UUID}
+				{user.peerUUID}
 				<Call {peer} receiverPeerUUID={user.peerUUID} {stream} />
 			</Card>
 		{/each}

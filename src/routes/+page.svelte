@@ -23,7 +23,6 @@
 	let intervalId: NodeJS.Timeout;
 
 	let peer: Peer;
-	let peerUUID: string;
 
 	type User = { UUID: string; peerUUID: string };
 
@@ -72,7 +71,6 @@
 		});
 
 		peer.on('open', (UUID: string) => {
-			peerUUID = UUID;
 			socket = new WebSocket(PUBLIC_ROOM_SERVER_URL);
 
 			socket.onopen = () => {
@@ -91,7 +89,6 @@
 			socket.onclose = (event) => {
 				console.warn('socket was closed', event);
 				disconnect();
-				connect();
 			};
 		});
 	}

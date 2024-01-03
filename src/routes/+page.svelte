@@ -62,14 +62,10 @@
 
 		peer.on('disconnected', (error) => {
 			console.warn('!!! peer disconnected !!!', error);
-			disconnect();
-			connect();
 		});
 
 		peer.on('error', (error) => {
 			console.warn('!!! peer error !!!', error);
-			disconnect();
-			connect();
 		});
 
 		//
@@ -112,6 +108,7 @@
 
 	function disconnect() {
 		clearInterval(intervalId);
+		socket.close();
 		users = [];
 	}
 

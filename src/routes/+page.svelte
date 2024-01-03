@@ -117,13 +117,11 @@
 	>
 		{#if positions.length >= 1}
 			<Card width={itemWidth} height={itemHeight} x={positions[0].x} y={positions[0].y}>
-				{peerUUID}
 				<Video bind:video mirrored={true} muted onMountCallback={start} />
 			</Card>
 		{/if}
 		{#each users as user, i (user.peerUUID)}
 			<Card width={itemWidth} height={itemHeight} x={positions[i + 1].x} y={positions[i + 1].y}>
-				{user.peerUUID}
 				<Call {peer} receiverPeerUUID={user.peerUUID} {stream} />
 			</Card>
 		{/each}

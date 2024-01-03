@@ -53,16 +53,9 @@
 
 	async function connect() {
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
-
-		peer.on('disconnected', (event) => {
-			console.warn('peer disconnected', event);
-		});
-
+		
 		peer.on('error', (event) => {
 			console.warn('peer error', event);
-
-			disconnect();
-			connect();
 		});
 
 		peer.on('call', (mediaConnection) => {
@@ -107,13 +100,18 @@
 		connect();
 	}
 
+	function reconnect(){
+		disconnect();
+		connect();
+	}
+
 	onDestroy(() => {
 		clearInterval(intervalId);
 		peer?.destroy();
 	});
 </script>
 
-<svelte:window on:online={connect} on:offline={disconnect} />
+<svelte:window on:online={reconnect} on:offline={disconnect} />
 
 <div class="page">
 	<BestFitLayout

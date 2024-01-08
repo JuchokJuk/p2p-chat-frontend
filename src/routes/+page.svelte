@@ -29,8 +29,8 @@
 	let users: User[] = [];
 
 	const actions = {
-		saveUsers: (data: User[]) => {
-			users = data;
+		saveUsers: (data: { users: User[]; UUID: string }) => {
+			users = data.users;
 		},
 		addUser: (user: User) => {
 			users.push(user);
@@ -53,7 +53,7 @@
 
 	async function connect() {
 		peer = new Peer({ host: PUBLIC_PEER_SERVER_HOST, port });
-		
+
 		peer.on('error', (event) => {
 			console.warn('peer error', event);
 		});
@@ -100,7 +100,7 @@
 		connect();
 	}
 
-	function reconnect(){
+	function reconnect() {
 		disconnect();
 		connect();
 	}
